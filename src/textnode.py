@@ -1,12 +1,12 @@
 from enum import Enum
 
 class TextType(Enum):
-    REGULAR = "regular" # Normal text
-    BOLD = "bold" # **Bold text**
-    ITALIC = "italic" # _Italic text_
-    CODE = "code" # `Code text`
-    LINK = "link" # Links, in this format: [anchor text](url)
-    IMAGE = "image" # Images, in this format: ![alt text](url)
+    BOLD = "bold"
+    TEXT = "text"
+    ITALIC = "italic"
+    CODE = "code"
+    LINK = "link"
+    IMAGE = "image"
 
 
 class TextNode():
@@ -30,3 +30,38 @@ class TextNode():
     
     def __repr__(self):
         return f"TextNode({self.text}, {self.text_type.value}, {self.url})"
+
+
+def point_to_error(input_str: str, error_index: int, length: int = 1) -> str:
+    pointer_line = " " * error_index + "^" * length
+    return f"{input_str}\n{pointer_line}"
+
+
+def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: TextType):
+    new_nodes = []
+    for old_node in old_nodes:
+        if old_node.text_type != TextType.TEXT:
+            new_nodes.append(old_node)
+            continue
+        nb_delimiters = old_node.text.count(delimiter)
+        if nb_delimiters == 0:
+            new_nodes.append(old_node)
+            continue
+        if nb_delimiters % 2 != 0:
+            raise ValueError(f"Unclosed delimiter '{delimiter}' in: {old_node.text}")
+        parts = old_node.text.split(delimiter)
+        for i, part in (enumerate(parts)):
+            if not part:
+                continue
+            if i % 2 == 0: # outside delimiter
+                new_nodes.append(TextNode(part, old_node.text_type))
+            else: # inside delimiter
+                new_nodes.append(TextNode(part, text_type))
+    return new_nodes
+        
+        
+
+node = TextNode("`This` is text with a `code block` `word`", TextType.TEXT)
+new_nodes = split_nodes_delimiter([node], "`", TextType.CODE)
+for n in new_nodes:
+    print(n)

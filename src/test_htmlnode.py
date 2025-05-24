@@ -1,5 +1,7 @@
 import unittest
-from htmlnode import HTMLNode, LeafNode, ParentNode
+from htmlnode import HTMLNode, LeafNode, ParentNode, text_node_to_html_node
+from textnode import TextNode, TextType
+from enum import Enum
 
 
 class TestHTMLNode(unittest.TestCase):
@@ -109,6 +111,30 @@ class TestParentNode(unittest.TestCase):
         parent_node = ParentNode("div", [child_node])
         with self.assertRaises(ValueError):
             parent_node.to_html()
+   
+
+class TestTextNode_to_HTMLNode(unittest.TestCase):
+    def test_all_text_types(self):
+        cases = [
+            (TextNode("text", TextType.TEXT), (None, "text", None, None)),
+            (TextNode("bold", TextType.BOLD), ("b", "bold", None, None)),
+            (TextNode("italic", TextType.ITALIC), ("i", "italic", None, None)),
+            (TextNode("code", TextType.CODE), ("code", "code", None, None)),
+            (TextNode("link", TextType.LINK, "url"), ("a", "link", None, {"href": "url"})),
+            (TextNode("img", TextType.IMAGE, "url"), ("img", "", None, {"src": "url", "alt": "img"})),
+        ]
+        for node, expected in cases:
+            with self.subTest(node=node):
+                html = text_node_to_html_node(node)
+                self.assertEqual((html.tag, html.value, html.children, html.props), expected)
+
+    def test_unsupported_text_type(self):
+        class FakeTextType(Enum):
+            UNKNOWN = "unknown"
+        node = TextNode("Text", FakeTextType.UNKNOWN)  # type: ignore
+        with self.assertRaises(AttributeError):
+            text_node_to_html_node(node)
+
 
 
 if __name__ == "__main__":

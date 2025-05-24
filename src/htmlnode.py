@@ -1,10 +1,13 @@
+from textnode import TextNode, TextType
+
+
 class HTMLNode():
     def __init__(
             self, 
             tag: str | None = None, 
             value: str | None = None, 
             children: list["HTMLNode"] | None = None, 
-            props: dict[str, str] | None = None
+            props: dict | None = None
             ) -> None:
         self.tag = tag
         self.value = value
@@ -61,3 +64,34 @@ class ParentNode(HTMLNode):
             result += node.to_html()
         result += f"</{self.tag}>"
         return result
+
+
+def text_node_to_html_node(text_node: TextNode):
+    tt = text_node.text_type
+    match tt:
+        case TextType.TEXT:
+            return HTMLNode(value=text_node.text)
+        case TextType.BOLD:
+            return HTMLNode(tag="b", value=text_node.text)
+        case TextType.ITALIC:
+            return HTMLNode(tag="i", value=text_node.text)
+        case TextType.CODE:
+            return HTMLNode(tag="code", value=text_node.text)
+        case TextType.LINK:
+            return HTMLNode(
+                tag="a", 
+                value=text_node.text, 
+                props={"href": text_node.url},
+                )
+        case TextType.IMAGE:
+            return HTMLNode(
+                tag="img", 
+                value="", 
+                props={
+                    "src": text_node.url,
+                    "alt": text_node.text
+                    },
+                )
+        case default:
+            raise AttributeError(f"Unsupported TextType enum value {text_node.text_type}")
+        
