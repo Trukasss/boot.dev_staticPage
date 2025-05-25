@@ -58,10 +58,15 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: 
             else: # inside delimiter
                 new_nodes.append(TextNode(part, text_type))
     return new_nodes
-        
-        
 
-node = TextNode("`This` is text with a `code block` `word`", TextType.TEXT)
-new_nodes = split_nodes_delimiter([node], "`", TextType.CODE)
-for n in new_nodes:
-    print(n)
+
+def extract_markdown_images(text):
+    from re import findall
+    matches = findall(r"!\[(?P<text>.*?)\]\((?P<url>.*?)\)", text) # ![<text>](<url>)
+    return matches
+
+
+def extract_markdown_links(text):
+    from re import findall
+    matches = findall(r"\[(?P<text>.*?)\]\((?P<url>.*?)\)", text) # [<text>](<url>)
+    return matches

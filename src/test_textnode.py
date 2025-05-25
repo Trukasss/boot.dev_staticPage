@@ -1,5 +1,11 @@
 import unittest
-from textnode import TextNode, TextType, split_nodes_delimiter
+from textnode import (
+    TextNode, 
+    TextType, 
+    split_nodes_delimiter,
+    extract_markdown_images,
+    extract_markdown_links,
+)
 
 
 class TestTexNode(unittest.TestCase):
@@ -105,6 +111,148 @@ class TestSplitNodesDelimiter(unittest.TestCase):
         ]
         self.assertEqual(result, expected)
 
+
+class TestExtractMarkdownImage(unittest.TestCase):
+    def test_single_image(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image1](https://www.domain.com/image1.png) space"
+        )
+        self.assertListEqual([("image1", "https://www.domain.com/image1.png")], matches)
+    
+    def test_multiple_images(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image1](https://www.domain.com/image1.png), this is the seconde text image ![image2](https://www.domain.com/image2.png)"
+        )
+        self.assertListEqual([
+            ("image1", "https://www.domain.com/image1.png"),
+            ("image2", "https://www.domain.com/image2.png"),
+            ], matches)
+    
+    def test_only_image(self):
+        matches = extract_markdown_images(
+            "![image](https://www.domain.com/image.png)"
+        )
+        self.assertListEqual([("image", "https://www.domain.com/image.png")], matches)
+    
+    def test_only_images(self):
+        matches = extract_markdown_images(
+            "![image1](https://www.domain.com/image1.png)![image2](https://www.domain.com/image2.png)"
+        )
+        self.assertListEqual([
+            ("image1", "https://www.domain.com/image1.png"),
+            ("image2", "https://www.domain.com/image2.png"),
+            ], matches)
+    
+    def test_no_images(self):
+        texts = [
+            "This is simple text",
+            "without exlamation point [image](url)"
+            "with spaces ! [image](url)",
+            "with spaces ![image] (url)",
+            "without url ![image]",
+            "without image !(url)",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_images(text)
+                self.assertListEqual(matches, [])
+    
+    def test_empty(self):
+        texts = [
+            "![]()",
+            "text in front ![]()",
+            "![]() text at the end",
+            "text in front ![]() text at the end",
+            "nospaces![]()nospaces",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_images(text)
+                self.assertListEqual(matches, [("", "")])
+    
+    def test_empties(self):
+        texts = [
+            "![]()![]()",
+            "text in front ![]()![]()",
+            "![]()![]() text at the end",
+            "![]()text in the middle![]()",
+            "text in front ![]()text in the middle![]() text at the end",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_images(text)
+                self.assertListEqual(matches, [("", ""), ("", "")])
+
+
+class TestExtractMarkdownLinks(unittest.TestCase):
+    def test_single_link(self):
+        matches = extract_markdown_links(
+            "This is text with an [link1](https://www.domain.com/link1) space"
+        )
+        self.assertListEqual([("link1", "https://www.domain.com/link1")], matches)
+    
+    def test_multiple_links(self):
+        matches = extract_markdown_links(
+            "This is text with an [link1](https://www.domain.com/link1), this is the seconde text link [link2](https://www.domain.com/link2)"
+        )
+        self.assertListEqual([
+            ("link1", "https://www.domain.com/link1"),
+            ("link2", "https://www.domain.com/link2"),
+            ], matches)
+    
+    def test_only_link(self):
+        matches = extract_markdown_links(
+            "[link](https://www.domain.com/link)"
+        )
+        self.assertListEqual([("link", "https://www.domain.com/link")], matches)
+    
+    def test_only_links(self):
+        matches = extract_markdown_links(
+            "[link1](https://www.domain.com/link1)[link2](https://www.domain.com/link2)"
+        )
+        self.assertListEqual([
+            ("link1", "https://www.domain.com/link1"),
+            ("link2", "https://www.domain.com/link2"),
+            ], matches)
+    
+    def test_no_links(self):
+        texts = [
+            "This is simple text",
+            "with spaces [link] (url)",
+            "without url [link]",
+            "without link (url)",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_links(text)
+                self.assertListEqual(matches, [])
+    
+    def test_empty(self):
+        texts = [
+            "[]()",
+            "text in front []()",
+            "[]() text at the end",
+            "text in front []() text at the end",
+            "nospaces[]()nospaces",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_links(text)
+                self.assertListEqual(matches, [("", "")])
+    
+    def test_empties(self):
+        texts = [
+            "[]()[]()",
+            "text in front []()[]()",
+            "[]()[]() text at the end",
+            "[]()text in the middle[]()",
+            "text in front []()text in the middle[]() text at the end",
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                matches = extract_markdown_links(text)
+                self.assertListEqual(matches, [("", ""), ("", "")])
+    
 
 if __name__ == "__main__":
     unittest.main()
