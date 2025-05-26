@@ -5,6 +5,8 @@ from textnode import (
     split_nodes_delimiter,
     extract_markdown_images,
     extract_markdown_links,
+    split_nodes_image,
+    split_nodes_link,
 )
 
 
@@ -252,7 +254,117 @@ class TestExtractMarkdownLinks(unittest.TestCase):
             with self.subTest(text=text):
                 matches = extract_markdown_links(text)
                 self.assertListEqual(matches, [("", ""), ("", "")])
-    
+
+
+class TestSplitNodesWithURL(unittest.TestCase):
+    def test_split_single_input_image(self):
+        cases = [
+            ("![image alt text](https://i.domain.com/img.png)",
+             [TextNode("image alt text", TextType.IMAGE, "https://i.domain.com/img.png")]),
+
+            ("![]()",
+             [TextNode("", TextType.IMAGE, "")]),
+
+            ("![only text]()",
+             [TextNode("only text", TextType.IMAGE, "")]),
+
+            ("![](only url)",
+             [TextNode("", TextType.IMAGE, "only url")]),
+
+            ("Text before ![img](url)", [
+                TextNode("Text before ", TextType.TEXT),
+                TextNode("img", TextType.IMAGE, "url"),
+            ]),
+
+            ("![img](url) text after", [
+                TextNode("img", TextType.IMAGE, "url"),
+                TextNode(" text after", TextType.TEXT),
+            ]),
+
+            ("Text before ![img](url) text after", [
+                TextNode("Text before ", TextType.TEXT),
+                TextNode("img", TextType.IMAGE, "url"),
+                TextNode(" text after", TextType.TEXT),
+            ]),
+
+            (" ![img](url) ", [
+                TextNode(" ", TextType.TEXT),
+                TextNode("img", TextType.IMAGE, "url"),
+                TextNode(" ", TextType.TEXT),
+            ]),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                split = split_nodes_image([TextNode(text, TextType.TEXT)])
+                self.assertEqual(split, expected)
+
+    def test_split_multiple_inputs_image(self):
+        cases = [
+            (
+                [
+                    TextNode("Intro ", TextType.TEXT),
+                    TextNode("Already bold", TextType.BOLD),
+                    TextNode("![img](url)", TextType.TEXT),
+                ],
+                [
+                    TextNode("Intro ", TextType.TEXT),
+                    TextNode("Already bold", TextType.BOLD),
+                    TextNode("img", TextType.IMAGE, "url"),
+                ]
+            ),
+            (
+                [
+                    TextNode("Intro ", TextType.BOLD),
+                    TextNode("Already bold", TextType.BOLD),
+                    TextNode("![img](url)", TextType.BOLD),
+                ],
+                [
+                    TextNode("Intro ", TextType.BOLD),
+                    TextNode("Already bold", TextType.BOLD),
+                    TextNode("![img](url)", TextType.BOLD),  # Should remain untouched
+                ]
+            ),
+        ]
+        for inputs, expected in cases:
+            with self.subTest(inputs=inputs):
+                split = split_nodes_image(inputs)
+                self.assertEqual(split, expected)
+
+    def test_split_links(self):
+        cases = [
+            ("[text](url)",
+             [TextNode("text", TextType.LINK, "url")]),
+
+            ("Before [text](url) after",
+             [
+                 TextNode("Before ", TextType.TEXT),
+                 TextNode("text", TextType.LINK, "url"),
+                 TextNode(" after", TextType.TEXT),
+             ]),
+
+            ("[text1](url1)[text2](url2)",
+             [
+                 TextNode("text1", TextType.LINK, "url1"),
+                 TextNode("text2", TextType.LINK, "url2"),
+             ]),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                split = split_nodes_link([TextNode(text, TextType.TEXT)])
+                self.assertEqual(split, expected)
+
+    def test_malformed_syntax(self):
+        cases = [
+            ("![missing paren", [TextNode("![missing paren", TextType.TEXT)]),
+            ("[text](url", [TextNode("[text](url", TextType.TEXT)]),
+            ("![img]url)", [TextNode("![img]url)", TextType.TEXT)]),
+            ("Just some text", [TextNode("Just some text", TextType.TEXT)]),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(split_nodes_image([TextNode(text, TextType.TEXT)]), expected)
+                self.assertEqual(split_nodes_link([TextNode(text, TextType.TEXT)]), expected)
+
 
 if __name__ == "__main__":
     unittest.main()

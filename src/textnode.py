@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 
 class TextType(Enum):
     BOLD = "bold"
@@ -30,11 +31,6 @@ class TextNode():
     
     def __repr__(self):
         return f"TextNode({self.text}, {self.text_type.value}, {self.url})"
-
-
-def point_to_error(input_str: str, error_index: int, length: int = 1) -> str:
-    pointer_line = " " * error_index + "^" * length
-    return f"{input_str}\n{pointer_line}"
 
 
 def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: TextType):
@@ -70,3 +66,47 @@ def extract_markdown_links(text):
     from re import findall
     matches = findall(r"\[(?P<text>.*?)\]\((?P<url>.*?)\)", text) # [<text>](<url>)
     return matches
+
+
+def split_nodes_with_url(old_nodes: list[TextNode], strategy_type: Literal["image", "link"]):
+    if strategy_type not in ["image", "link"]:
+        raise ValueError(f"Unsupported split node strategy '{strategy_type}'")
+    new_node_type = TextType.LINK if strategy_type == "link" else TextType.IMAGE
+    new_nodes = []
+    for node in old_nodes:
+        if node.text_type != TextType.TEXT:
+            new_nodes.append(node)
+            continue
+        if strategy_type == "link":
+            matches = extract_markdown_links(node.text)
+        else:
+            matches = extract_markdown_images(node.text)
+        if not matches:
+            new_nodes.append(node)
+            continue
+        text_left = node.text
+        for match in matches:
+            match_text = match[0]
+            match_url = match[1]
+            if strategy_type == "link":
+                sep = f"[{match_text}]({match_url})"
+            else:
+                sep = f"![{match_text}]({match_url})"
+            parts = text_left.split(sep, 1)
+            if parts[0] != "":
+                new_nodes.append(TextNode(parts[0], TextType.TEXT))
+            text_left = parts[1]
+            new_nodes.append(TextNode(match_text, new_node_type, match_url))
+        if text_left:
+            new_nodes.append(TextNode(text_left, TextType.TEXT))
+    return new_nodes
+
+
+def split_nodes_image(old_nodes: list[TextNode]):
+    new_nodes = split_nodes_with_url(old_nodes, "image")
+    return new_nodes
+
+
+def split_nodes_link(old_nodes: list[TextNode]):
+    new_nodes = split_nodes_with_url(old_nodes, "link")
+    return new_nodes
