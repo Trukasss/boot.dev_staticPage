@@ -7,6 +7,8 @@ from textnode import (
     extract_markdown_links,
     split_nodes_image,
     split_nodes_link,
+    text_to_textnodes,
+    markdown_to_blocks,
 )
 
 
@@ -365,6 +367,99 @@ class TestSplitNodesWithURL(unittest.TestCase):
                 self.assertEqual(split_nodes_image([TextNode(text, TextType.TEXT)]), expected)
                 self.assertEqual(split_nodes_link([TextNode(text, TextType.TEXT)]), expected)
 
+
+class TestTextToTextNodes(unittest.TestCase):
+    def test_text_to_text_nodes(self):
+        cases = [
+            ("This is **text**", [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+            ]),
+            ("This is **text** with an _italic_", [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+            ]),
+            ("This is **text** with an _italic_ word and a `code block` ", [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" ", TextType.TEXT),
+            ]),
+            ("This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a ", [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT),
+            ]),
+            ("This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)", [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ]),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                nodes = text_to_textnodes(text)
+                self.assertEqual(nodes, expected)
+
+
+class TestMarkdownToBlocs(unittest.TestCase):
+    def test_markdown_to_blocks(self):
+        cases = [
+            ("""
+
+This is **bolded** paragraph
+
+            """, 
+            [
+                "This is **bolded** paragraph",
+            ]),
+
+            ("""
+This is **bolded** paragraph
+- This is a list
+- with items
+            """, 
+            [
+                "This is **bolded** paragraph\n- This is a list\n- with items",
+            ]),
+
+            ("""
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+            """, 
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ]),
+        ]
+        for md, expected in cases:
+            with self.subTest(md=md):
+                blocks = markdown_to_blocks(md)
+                self.assertEqual(blocks, expected)
 
 if __name__ == "__main__":
     unittest.main()

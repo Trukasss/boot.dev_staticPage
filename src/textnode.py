@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Literal
+from typing import Literal, Any
 
 class TextType(Enum):
-    BOLD = "bold"
     TEXT = "text"
+    BOLD = "bold"
     ITALIC = "italic"
     CODE = "code"
     LINK = "link"
@@ -20,7 +20,7 @@ class TextNode():
         self.text_type = text_type
         self.url = url 
     
-    def __eq__(self, value):
+    def __eq__(self, value: Any):
         if not isinstance(value, self.__class__):
             return False
         if (value.text == self.text
@@ -34,7 +34,7 @@ class TextNode():
 
 
 def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: TextType):
-    new_nodes = []
+    new_nodes: list[TextNode] = []
     for old_node in old_nodes:
         if old_node.text_type != TextType.TEXT:
             new_nodes.append(old_node)
@@ -56,13 +56,13 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: 
     return new_nodes
 
 
-def extract_markdown_images(text):
+def extract_markdown_images(text: str):
     from re import findall
     matches = findall(r"!\[(?P<text>.*?)\]\((?P<url>.*?)\)", text) # ![<text>](<url>)
     return matches
 
 
-def extract_markdown_links(text):
+def extract_markdown_links(text: str):
     from re import findall
     matches = findall(r"\[(?P<text>.*?)\]\((?P<url>.*?)\)", text) # [<text>](<url>)
     return matches
@@ -72,7 +72,7 @@ def split_nodes_with_url(old_nodes: list[TextNode], strategy_type: Literal["imag
     if strategy_type not in ["image", "link"]:
         raise ValueError(f"Unsupported split node strategy '{strategy_type}'")
     new_node_type = TextType.LINK if strategy_type == "link" else TextType.IMAGE
-    new_nodes = []
+    new_nodes: list[TextNode] = []
     for node in old_nodes:
         if node.text_type != TextType.TEXT:
             new_nodes.append(node)
@@ -110,3 +110,20 @@ def split_nodes_image(old_nodes: list[TextNode]):
 def split_nodes_link(old_nodes: list[TextNode]):
     new_nodes = split_nodes_with_url(old_nodes, "link")
     return new_nodes
+
+
+def text_to_textnodes(text: str):
+    text_nodes = [TextNode(text, TextType.TEXT)]
+    text_nodes = split_nodes_delimiter(text_nodes, "**", TextType.BOLD)
+    text_nodes = split_nodes_delimiter(text_nodes, "_", TextType.ITALIC)
+    text_nodes = split_nodes_delimiter(text_nodes, "`", TextType.CODE)
+    text_nodes = split_nodes_image(text_nodes)
+    text_nodes = split_nodes_link(text_nodes)
+    return text_nodes
+
+
+def markdown_to_blocks(markdown: str):
+    blocks = markdown.split("\n\n")
+    blocks = [block.strip() for block in blocks]
+    blocks = [block for block in blocks if block]
+    return blocks
