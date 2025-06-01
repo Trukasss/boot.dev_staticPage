@@ -461,5 +461,6 @@ This is the same paragraph on a new line
                 blocks = markdown_to_blocks(md)
                 self.assertEqual(blocks, expected)
 
+
 if __name__ == "__main__":
     unittest.main()

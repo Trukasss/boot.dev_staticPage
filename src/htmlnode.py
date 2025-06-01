@@ -25,6 +25,18 @@ class HTMLNode():
     def __repr__(self) -> str:
         return f"HTMLNode(tag={self.tag}, value={self.value}, children={self.children}, props={self.props})"
     
+    def __eq__(self, value):
+        if not isinstance(value, HTMLNode):
+            return False
+        if (
+            self.tag == value.tag
+            and self.value == value.value
+            and self.children == value.children
+            and self.props == value.props
+        ):
+            return True
+        return False
+    
 
 class LeafNode(HTMLNode):
     def __init__(
@@ -92,6 +104,5 @@ def text_node_to_html_node(text_node: TextNode):
                     "alt": text_node.text
                     },
                 )
-        case default:
+        case _:
             raise AttributeError(f"Unsupported TextType enum value {text_node.text_type}")
-        
